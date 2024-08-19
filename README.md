@@ -16,7 +16,7 @@ from pyobjloader import load_model
 ```
 
 ## Use
-To get the numpy array of vertices, first setup a directory containing the .obj
+To get the numpy array of vertices, first place the .obj somewhere in your project file (example shown)
 
 ```
 project
@@ -25,20 +25,22 @@ project
 └─── my_model.obj
 ```
 
-Then pass the directory into the load function
+Then pass the file path into the load function
 ```py
-model = load_model('my_model_directory')
-vertex_array = model.vertex_array
+model = load_model('my_model_directory/my_model.obj')
+vertex_data = model.vertex_data
 ```
 
 ## Format
-The format of the vertex array is as follows:
+The format of the vertex data for an obj is stored in the model:
 
 ```py
 # ModernGL Specifications
-vertex_format = '3f 2f 3f'
-vertex_attribs = ['in_position', 'in_texcoord', 'in_normal']
+vertex_format = model.format  # ie. '3f 2f 3f'
+vertex_attribs = model.attribs  # ie. ['in_position', 'in_uv', 'in_normal']
 ```
+
+Attribute names will always be some combination of `'in_position'`, `'in_uv'`, and `'in_normal'`. Possible cominations include `['in_position', 'in_uv', 'in_normal']` and `['in_position', 'in_normal']` (Normals are calculated if not given)
 
 ## Example with ModernGL
 Here is an example VAO made with ModernGL and PyObjLoader
@@ -49,16 +51,12 @@ ctx = ...
 program = ...
 
 # Load the model using pyobjloader
-model = load_model('my_model_directory')
-vertex_array = model.vertex_array
+model = load_model('my_model_directory/my_model')
+vertex_data = model.vertex_data
 
 # Make a vertex buffer object with the vertex data
 vbo = ctx.buffer(vertex_data)
 
-# VBO Formatting
-vertex_format = '3f 2f 3f'
-vertex_attribs = ['in_position', 'in_texcoord', 'in_normal']
-
 # Create a vertex array object
-vao = ctx.vertex_array(program, [(vbo, vertex_format, *vertex_attribs)])
+vao = ctx.vertex_data(program, [(vbo, model.format, *model.attribs)])
 ```

@@ -1,11 +1,11 @@
-import os
 import numpy as np
+import glm
 
 
 class Model:
     """
     Instance of a loaded model. Contains all objects, groups, and vertex data
-    model.vertex_array contains all vertex data
+    model.vertex_data contains all vertex data
     Objects stored in the model.objects dictionary, where keys are the object names (marked by 'o') in the .obj
     Default object key is '0'
     """
@@ -13,7 +13,9 @@ class Model:
     def __init__(self) -> None:
         self.objects = {0 : VertexObject()}
 
-        self.vertex_array = []
+        self.vertex_data = []
+        self.format  = None
+        self.attribs = None
 
         self.vertex_points = []
         self.vertex_uv = []
@@ -48,46 +50,30 @@ class VertexObject:
 class VertexGroup:
     """
     Groups containing the vertex data
-    vertex_group.vertex_array will be a numpy array of vertices
+    vertex_group.vertex_data will be a numpy array of vertices
     """
     
     def __init__(self) -> None:
-        self.vertex_array = []
+        self.vertex_data = []
 
     def __repr__(self) -> str:
-        return f'<Vertex Group | {self.vertex_array}>'
+        return f'<Vertex Group | {self.vertex_data}>'
 
 
-def load_model(directory: str) -> Model:
+def load_model(obj_file: str) -> Model:
     """
     Loads an obj model. Returns a model class instance 
-    model.vertex_array contains all vertex data combined in a single numpy array
+    model.vertex_data contains all vertex data combined in a single numpy array
     Args:
-        directory: Path to the folder containing the .obj, .mtl, and any textures images 
+        file: Path to the .obj file to load
     """
-
-    obj_file = None
-    mtl_file = None
-    texture_file = None
-
-    for file in os.listdir(directory):
-        filename = os.fsdecode(file)
-
-        # Get the .obj file
-        if filename.endswith(".obj") or filename.endswith(".py"):
-            obj_file = os.path.join(directory, filename)
-
-        # Get the .mtl file
-        if filename.endswith(".mtl") or filename.endswith(".py"):
-            mtl_file = os.path.join(directory, filename)
-
-        #  Get texture files
-        if filename.endswith(".png") or filename.endswith(".py"):
-            texture_file = os.path.join(directory, filename)
 
     model = Model()
     current_object = 0
     current_group = 0
+
+    vertex_format  = None
+    vertex_attribs = None
 
     with open(obj_file, 'r') as file:
         line = file.readline()
@@ -126,27 +112,48 @@ def load_model(directory: str) -> Model:
                 corners = line[2:].strip().split(' ')
                 
                 for corner_index, corner in enumerate(corners):
-                    corner = list(map(int, corner.split('/')))
+                    corner = corner.split('/')
+
+                    if not vertex_format:
+                        if len(corner) == 1:
+                            vertex_format  = '3f'
+                            vertex_attribs = ['in_position']
+                        elif not corner[1]:
+                            vertex_format  = '3f 3f'
+                            vertex_attribs = ['in_position', 'in_normal']
+                        else:
+                            vertex_format  = '3f 2f 3f'
+                            vertex_attribs = ['in_position', 'in_uv', 'in_normal']
 
                     vertex = []
 
                     # Add each attribute to the vertex
                     for attribute, index in enumerate(corner):
                         if attribute == 0 and index:
-                            vertex += model.vertex_points[index - 1]
+                            vertex += model.vertex_points[int(index) - 1]
                         if attribute == 1 and index:
-                            vertex += model.vertex_uv[index - 1]
+                            vertex += model.vertex_uv[int(index) - 1]
                         if attribute == 2 and index:
-                            vertex += model.vertex_normals[index - 1]
+                            vertex += model.vertex_normals[int(index) - 1]
 
                     # Replace the vertex data 
                     corners[corner_index] = vertex
 
                 # Add each triangle to the objects vertex array
                 for triangle in range(len(corners) - 2):
-                    model.objects[current_object].groups[current_group].vertex_array.append(corners[0])
-                    model.objects[current_object].groups[current_group].vertex_array.append(corners[1 + triangle])
-                    model.objects[current_object].groups[current_group].vertex_array.append(corners[2 + triangle])
+                    if 'in_normal' not in vertex_attribs: # If the model doesnt have normals, calculate face normals
+                        p1 = glm.vec3(corners[0])
+                        p2 = glm.vec3(corners[1 + triangle])
+                        p3 = glm.vec3(corners[2 + triangle])
+                        normal = glm.normalize(glm.cross(p2 - p1, p3 - p1))
+                        normal = list(normal.xyz)
+                        model.objects[current_object].groups[current_group].vertex_data.append(corners[0] + normal)
+                        model.objects[current_object].groups[current_group].vertex_data.append(corners[1 + triangle] + normal)
+                        model.objects[current_object].groups[current_group].vertex_data.append(corners[2 + triangle] + normal)
+                    else: # Standard reading
+                        model.objects[current_object].groups[current_group].vertex_data.append(corners[0])
+                        model.objects[current_object].groups[current_group].vertex_data.append(corners[1 + triangle])
+                        model.objects[current_object].groups[current_group].vertex_data.append(corners[2 + triangle])
 
             line = file.readline()
 
@@ -156,16 +163,25 @@ def load_model(directory: str) -> Model:
     for object in model.objects.values():
         for group in object.groups.values():
             # Ignore empty groups
-            if not len(group.vertex_array): continue
+            if not len(group.vertex_data): continue
             # Convert to a numpy array
-            group.vertex_array = np.array(group.vertex_array, dtype='f4')
+            group.vertex_data = np.array(group.vertex_data, dtype='f4')
             # Add to the vertex_groups list to be stacked
-            vertex_groups.append(group.vertex_array)
+            vertex_groups.append(group.vertex_data)
 
     # Array of all vertices from all the model's groups combined
     vertices = np.vstack(vertex_groups, dtype='f4')
 
     # Save the model's combined vertices
-    model.vertex_array = vertices
+    model.vertex_data = vertices
+
+    # Add normals to position only models
+    if vertex_format == '3f':
+        vertex_format  = '3f 3f'
+        vertex_attribs = ['in_position', 'in_normal']
+
+    # Save the model vertex format and attribs
+    model.format = vertex_format
+    model.attribs = vertex_attribs
 
     return model
