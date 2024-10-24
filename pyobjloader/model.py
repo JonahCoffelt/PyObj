@@ -17,9 +17,19 @@ class Model:
         self.format  = None
         self.attribs = None
 
-        self.vertex_points = []
-        self.vertex_uv = []
+        self.vertex_points  = []
+        """The unique points given by the file"""
+        self.vertex_uv      = []
+        """The unique texture coordinates given by the file"""
         self.vertex_normals = []
+        """The unique normals given by the file"""
+
+        self.point_indices  = []
+        """Indices of to vertex_points to construct triangles. Grouped in three."""
+        self.uv_indices     = []
+        """Indices of to vertex_uv to construct triangles. Grouped in three."""
+        self.normal_indices = []
+        """Indices of to vertex_normals to construct triangles. Grouped in three."""
 
     def __repr__(self) -> str:
         return_string = '<Model | objects: {'
@@ -110,7 +120,8 @@ def load_model(obj_file: str) -> Model:
             # Create faces
             elif line.startswith('f '):
                 corners = line[2:].strip().split(' ')
-                
+                # The index of the position, uv, and normal in each vertex
+                vertex_indices = [[0, 0, 0] for i in range(len(corners))]
                 for corner_index, corner in enumerate(corners):
                     corner = corner.split('/')
 
@@ -131,10 +142,13 @@ def load_model(obj_file: str) -> Model:
                     for attribute, index in enumerate(corner):
                         if attribute == 0 and index:
                             vertex += model.vertex_points[int(index) - 1]
+                            vertex_indices[corner_index][0] = int(index) - 1
                         if attribute == 1 and index:
                             vertex += model.vertex_uv[int(index) - 1]
+                            vertex_indices[corner_index][1] = int(index) - 1
                         if attribute == 2 and index:
                             vertex += model.vertex_normals[int(index) - 1]
+                            vertex_indices[corner_index][2] = int(index) - 1
 
                     # Replace the vertex data 
                     corners[corner_index] = vertex
@@ -147,13 +161,23 @@ def load_model(obj_file: str) -> Model:
                         p3 = glm.vec3(corners[2 + triangle])
                         normal = glm.normalize(glm.cross(p2 - p1, p3 - p1))
                         normal = list(normal.xyz)
+                        model.vertex_normals.append(normal)
                         model.objects[current_object].groups[current_group].vertex_data.append(corners[0] + normal)
                         model.objects[current_object].groups[current_group].vertex_data.append(corners[1 + triangle] + normal)
                         model.objects[current_object].groups[current_group].vertex_data.append(corners[2 + triangle] + normal)
+                        
+                        # Add the triangle to the indices
+                        model.point_indices.append([vertex_indices[0][0], vertex_indices[1 + triangle][0], vertex_indices[2 + triangle][0]])
+                        model.normal_indices.append([len(model.vertex_normals) - 1] * 3)
                     else: # Standard reading
                         model.objects[current_object].groups[current_group].vertex_data.append(corners[0])
                         model.objects[current_object].groups[current_group].vertex_data.append(corners[1 + triangle])
                         model.objects[current_object].groups[current_group].vertex_data.append(corners[2 + triangle])
+
+                        # Add the triangle to the indices
+                        model.point_indices.append([vertex_indices[0][0], vertex_indices[1 + triangle][0], vertex_indices[2 + triangle][0]])
+                        model.uv_indices.append([vertex_indices[0][1], vertex_indices[1 + triangle][1], vertex_indices[2 + triangle][1]])
+                        model.normal_indices.append([vertex_indices[0][2], vertex_indices[1 + triangle][2], vertex_indices[2 + triangle][2]])
 
             line = file.readline()
 
@@ -174,6 +198,14 @@ def load_model(obj_file: str) -> Model:
 
     # Save the model's combined vertices
     model.vertex_data = vertices
+
+    # Convert the points and indices to array for convenience with C-like buffers
+    model.vertex_points  = np.array(model.vertex_points,  dtype="f4")
+    model.vertex_uv      = np.array(model.vertex_uv,      dtype="f4")
+    model.vertex_normals = np.array(model.vertex_normals, dtype="f4")
+    model.point_indices  = np.array(model.point_indices,  dtype="i4")
+    model.uv_indices     = np.array(model.uv_indices,     dtype="i4")
+    model.normal_indices = np.array(model.normal_indices, dtype="i4")
 
     # Add normals to position only models
     if vertex_format == '3f':
