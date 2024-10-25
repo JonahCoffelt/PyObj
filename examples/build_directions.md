@@ -2,7 +2,25 @@ This is more of a personal reminder than an example.
 These are the scripts I use to upload to PyPI, so I will use them to update the package.
 Feel free to use this as a little publishing reference :)
 
-# Set up
+# Required Packages
+Run the following command to get all the required packages:
+```
+pip install wheel setuptools twine
+```
+
+# Project Folder
+The folder you are working in should look something like this:
+```
+project
+│ setup.py
+│ README.md
+│ LICENSE.txt
+│ package_name
+|─── __init__.py
+└─── package_script_1.py
+```
+
+# setup.py
 This file must be present to continue. There is a lot in it, so just include all the following:
 ```py
 from setuptools import setup, find_packages
@@ -13,7 +31,7 @@ with open(path.join(working_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name = 'package_name',
+    name = 'package_name',  # Name of folder containing scripts and __init__
     version = '0.0.1',
     url = 'github.com',
     author = 'Name',
@@ -26,15 +44,18 @@ setup(
 )
 ```
 
+# License and Readme
+It is good practice to include both a license and readme file in your package. I typically use the MIT license. README should give an outline of the package.
+
 # __init__.py
-This is used to specify what is visible in the package. I put it in a foler with the same name as the package and specified this in `setup.py`. All scripts are in this folder. For this project, this file is very simple:
+This is used to specify what is visible in the package. For most projects, this file is very simple:
 ```py
-from .model import load_model
+from .package_script_1 import my_function
 ```
-This brings the load_model function to the package level.
+This brings my_function to the package level.
 
 # Building
-First, build with wheel. You will have to increase the version number in `setup.py` to avoid conflicts.
+First, build with wheel. If you have already published this package, you will have to increase the version number in `setup.py` to avoid conflicts when uploading to PyPI.
 
 Run the following script in the project terminal:
 ```
@@ -42,8 +63,8 @@ python setup.py sdist bdist_wheel
 ```
 
 # Publishing
-Use twine to upload to PyPI. Run the follwin script:
+Use twine to upload to PyPI. Run the following script:
 ```
 twine upload dist/*
 ```
-You will need to give your information to actually upload the package. 
+You will need to give your API key upload the package. 
