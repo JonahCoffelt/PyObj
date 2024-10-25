@@ -1,8 +1,8 @@
 # PyObjLoader
-An obj model loader for python. Currently will only return a numpy array of vertices containing position, uv, and normals.
+An obj model loader for python. Ideal for 3D data and graphics.
 
 ## Setup
-Run the install command
+Run the install command.
 
 ```pip
 pip install pyobjloader
@@ -30,6 +30,7 @@ Then pass the file path into the load function
 model = load_model('my_model_directory/my_model.obj')
 vertex_data = model.vertex_data
 ```
+Examples for how to access more data from the model are in the github examples folder.
 
 ## Format
 The format of the vertex data for an obj is stored in the model:
@@ -40,7 +41,7 @@ vertex_format = model.format  # ie. '3f 2f 3f'
 vertex_attribs = model.attribs  # ie. ['in_position', 'in_uv', 'in_normal']
 ```
 
-Attribute names will always be some combination of `'in_position'`, `'in_uv'`, and `'in_normal'`. Possible cominations include `['in_position', 'in_uv', 'in_normal']` and `['in_position', 'in_normal']` (Normals are calculated if not given)
+Possible attributes include `['in_position', 'in_uv', 'in_normal']` and `['in_position', 'in_normal']` (Normals are calculated if not given)
 
 ## Example with ModernGL
 Here is an example VAO made with ModernGL and PyObjLoader
@@ -60,3 +61,5 @@ vbo = ctx.buffer(vertex_data)
 # Create a vertex array object
 vao = ctx.vertex_data(program, [(vbo, model.format, *model.attribs)])
 ```
+
+##
