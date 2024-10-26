@@ -14,6 +14,9 @@ class Model:
         self.objects = {0 : VertexObject()}
 
         self.vertex_data = []
+        """All vertex data in the obj. Use this for buffer data"""
+        self.tangent_data = []
+        """Tangents and bitangents"""
         self.format  = None
         self.attribs = None
 
@@ -30,6 +33,7 @@ class Model:
         """Indices of to vertex_uv to construct triangles. Grouped in three."""
         self.normal_indices = []
         """Indices of to vertex_normals to construct triangles. Grouped in three."""
+
 
     def __repr__(self) -> str:
         return_string = '<Model | objects: {'
@@ -65,17 +69,21 @@ class VertexGroup:
     
     def __init__(self) -> None:
         self.vertex_data = []
+        self.tangent_data = []
 
     def __repr__(self) -> str:
         return f'<Vertex Group | {self.vertex_data}>'
 
 
-def load_model(obj_file: str) -> Model:
+def load_model(obj_file: str, calculate_tangents=False) -> Model:
     """
     Loads an obj model. Returns a model class instance 
     model.vertex_data contains all vertex data combined in a single numpy array
     Args:
-        file: Path to the .obj file to load
+        file:
+            Path to the .obj file to load
+        calculate_tangents:
+            Calculates the tangent and bitangent vectors for normal mapping
     """
 
     model = Model()
@@ -179,9 +187,32 @@ def load_model(obj_file: str) -> Model:
                         model.uv_indices.append([vertex_indices[0][1], vertex_indices[1 + triangle][1], vertex_indices[2 + triangle][1]])
                         model.normal_indices.append([vertex_indices[0][2], vertex_indices[1 + triangle][2], vertex_indices[2 + triangle][2]])
 
+                    # Calculate the tangents and bitangents
+                    if calculate_tangents and 'in_uv' in vertex_attribs:
+                        x1 = corners[1 + triangle][0] - corners[0][0]
+                        x2 = corners[2 + triangle][0] - corners[0][0]
+                        y1 = corners[1 + triangle][1] - corners[0][1]
+                        y2 = corners[2 + triangle][1] - corners[0][1]
+                        z1 = corners[1 + triangle][2] - corners[0][2]
+                        z2 = corners[2 + triangle][2] - corners[0][2]
+                        
+                        s1 = corners[1 + triangle][3] - corners[0][3]
+                        s2 = corners[2 + triangle][3] - corners[0][3]
+                        t1 = corners[1 + triangle][4] - corners[0][4]
+                        t2 = corners[2 + triangle][4] - corners[0][4]
+                        
+                        r = 1.0 / (s1 * t2 - s2 * t1);
+                        tangent   = glm.normalize(((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r, (t2 * z1 - t1 * z2) * r))
+                        bitangent = glm.normalize(((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r, (s1 * z2 - s2 * z1) * r))
+            
+                        data = [[*tangent.xyz, *bitangent.xyz]] * 3
+
+                        model.objects[current_object].groups[current_group].tangent_data.extend(data)
+
             line = file.readline()
 
     vertex_groups = []
+    tangent_groups = []
 
     # Loop through all vertex objects and groups in the model
     for object in model.objects.values():
@@ -192,12 +223,15 @@ def load_model(obj_file: str) -> Model:
             group.vertex_data = np.array(group.vertex_data, dtype='f4')
             # Add to the vertex_groups list to be stacked
             vertex_groups.append(group.vertex_data)
+            tangent_groups.append(group.tangent_data)
 
     # Array of all vertices from all the model's groups combined
-    vertices = np.vstack(vertex_groups, dtype='f4')
+    vertices = np.vstack(vertex_groups,  dtype='f4')
+    tangents = np.vstack(tangent_groups, dtype='f4')
 
     # Save the model's combined vertices
-    model.vertex_data = vertices
+    model.vertex_data  = vertices
+    model.tangent_data = tangents
 
     # Convert the points and indices to array for convenience with C-like buffers
     model.vertex_points  = np.array(model.vertex_points,  dtype="f4")

@@ -1,5 +1,6 @@
 # PyObjLoader
-An obj model loader for python. Ideal for 3D data and graphics.
+An obj model loader for python. Ideal for 3D data and graphics. 
+Includes object and group trees, and automatic normal, tangent, and bitangent calculations. 
 
 ## Setup
 Run the install command.

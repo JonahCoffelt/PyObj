@@ -1,0 +1,10 @@
+LICENSE.txt
+README.md
+setup.py
+pyobjloader/__init__.py
+pyobjloader/model.py
+pyobjloader.egg-info/PKG-INFO
+pyobjloader.egg-info/SOURCES.txt
+pyobjloader.egg-info/dependency_links.txt
+pyobjloader.egg-info/requires.txt
+pyobjloader.egg-info/top_level.txt
