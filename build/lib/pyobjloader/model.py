@@ -201,7 +201,9 @@ def load_model(obj_file: str, calculate_tangents=False) -> Model:
                         t1 = corners[1 + triangle][4] - corners[0][4]
                         t2 = corners[2 + triangle][4] - corners[0][4]
                         
-                        r = 1.0 / (s1 * t2 - s2 * t1);
+                        if (s1 * t2 - s2 * t1): r = 1.0 / (s1 * t2 - s2 * t1)
+                        else: r = 1
+
                         tangent   = glm.normalize(((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r, (t2 * z1 - t1 * z2) * r))
                         bitangent = glm.normalize(((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r, (s1 * z2 - s2 * z1) * r))
             

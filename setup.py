@@ -7,7 +7,7 @@ with open(path.join(working_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='pyobjloader', # name of packe which will be package dir below project
-    version='0.0.6',
+    version='0.0.7',
     url='https://github.com/JonahCoffelt/PyObjLoader',
     author='Jonah Coffelt',
     author_email='coffelt.jonah@gmail.com',

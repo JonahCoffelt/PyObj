@@ -13,7 +13,7 @@ pip install pyobjloader
 Import the load function
 
 ```py
-from pyobjloader import load_model
+from pyobjloader import load_model 
 ```
 
 ## Use
